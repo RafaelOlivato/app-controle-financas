@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, TrendingUp, TrendingDown, DollarSign, Calendar, Filter, Edit2, Trash2, Target, Settings, AlertTriangle, PieChart, BarChart3, CheckCircle } from 'lucide-react'
-import { supabase, transactionService, categoryService, goalService, initializeTables, Transaction, Category, Goal } from '@/lib/supabase'
+import { supabase, transactionService, categoryService, goalService, Transaction, Category, Goal } from '@/lib/supabase'
+import { initializeDatabase } from '@/lib/database-setup'
 
 const paymentMethods = ['Dinheiro', 'Cartão de Débito', 'Cartão de Crédito', 'PIX', 'Transferência']
 
@@ -59,8 +60,9 @@ export default function FinanceControl() {
     try {
       setLoading(true)
       
-      // Inicializar tabelas primeiro
-      await initializeTables()
+      // Inicializar banco de dados primeiro
+      console.log('🔧 Inicializando banco de dados...')
+      await initializeDatabase()
       
       const [transactionsData, categoriesData, goalsData] = await Promise.all([
         transactionService.getAll(),
@@ -71,6 +73,8 @@ export default function FinanceControl() {
       setTransactions(transactionsData)
       setCategories(categoriesData)
       setGoals(goalsData)
+      
+      console.log('✅ Dados carregados com sucesso!')
     } catch (error) {
       console.error('Erro ao carregar dados:', error)
     } finally {
@@ -316,7 +320,7 @@ export default function FinanceControl() {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando dados...</p>
+          <p className="text-gray-600">Inicializando banco de dados...</p>
         </div>
       </div>
     )

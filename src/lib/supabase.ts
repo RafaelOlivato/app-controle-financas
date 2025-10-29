@@ -38,91 +38,28 @@ export interface Goal {
   updated_at?: string
 }
 
-// Função para inicializar as tabelas
-export const initializeTables = async () => {
-  try {
-    // Criar tabela de transações
-    await supabase.rpc('exec_sql', {
-      sql: `
-        CREATE TABLE IF NOT EXISTS public.transactions (
-          id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-          type text NOT NULL CHECK (type IN ('income', 'expense')),
-          amount numeric NOT NULL,
-          category text NOT NULL,
-          date date NOT NULL,
-          payment_method text,
-          description text,
-          created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-          updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-        );
-      `
-    })
-
-    // Criar tabela de categorias
-    await supabase.rpc('exec_sql', {
-      sql: `
-        CREATE TABLE IF NOT EXISTS public.categories (
-          id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-          name text NOT NULL UNIQUE,
-          limit_amount numeric DEFAULT 0,
-          color text NOT NULL DEFAULT '#EF4444',
-          icon text NOT NULL DEFAULT 'MoreHorizontal',
-          created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-          updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-        );
-      `
-    })
-
-    // Criar tabela de metas
-    await supabase.rpc('exec_sql', {
-      sql: `
-        CREATE TABLE IF NOT EXISTS public.goals (
-          id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-          name text NOT NULL,
-          target_amount numeric NOT NULL,
-          current_amount numeric DEFAULT 0,
-          deadline date NOT NULL,
-          created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-          updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-        );
-      `
-    })
-
-    // Inserir categorias padrão se não existirem
-    const { data: existingCategories } = await supabase
-      .from('categories')
-      .select('id')
-      .limit(1)
-
-    if (!existingCategories || existingCategories.length === 0) {
-      await supabase.from('categories').insert([
-        { name: 'Alimentação', color: '#EF4444', icon: 'Utensils', limit_amount: 800 },
-        { name: 'Transporte', color: '#F59E0B', icon: 'Car', limit_amount: 400 },
-        { name: 'Moradia', color: '#10B981', icon: 'Home', limit_amount: 1200 },
-        { name: 'Saúde', color: '#3B82F6', icon: 'Heart', limit_amount: 300 },
-        { name: 'Educação', color: '#8B5CF6', icon: 'BookOpen', limit_amount: 200 },
-        { name: 'Lazer', color: '#EC4899', icon: 'Gamepad2', limit_amount: 300 },
-        { name: 'Salário', color: '#059669', icon: 'DollarSign', limit_amount: 0 },
-        { name: 'Freelance', color: '#0891B2', icon: 'Briefcase', limit_amount: 0 }
-      ])
-    }
-
-    console.log('Tabelas inicializadas com sucesso!')
-  } catch (error) {
-    console.error('Erro ao inicializar tabelas:', error)
-  }
-}
-
 // Funções para transações
 export const transactionService = {
   async getAll(): Promise<Transaction[]> {
-    const { data, error } = await supabase
-      .from('transactions')
-      .select('*')
-      .order('date', { ascending: false })
-    
-    if (error) throw error
-    return data || []
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .order('date', { ascending: false })
+      
+      if (error) {
+        console.error('Erro ao carregar transações:', error)
+        return []
+      }
+      
+      return (data || []).map(item => ({
+        ...item,
+        paymentMethod: item.payment_method || ''
+      }))
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error)
+      return []
+    }
   },
 
   async create(transaction: Omit<Transaction, 'id' | 'created_at' | 'updated_at'>): Promise<Transaction> {
@@ -176,16 +113,25 @@ export const transactionService = {
 // Funções para categorias
 export const categoryService = {
   async getAll(): Promise<Category[]> {
-    const { data, error } = await supabase
-      .from('categories')
-      .select('*')
-      .order('name')
-    
-    if (error) throw error
-    return (data || []).map(item => ({
-      ...item,
-      limit: item.limit_amount || 0
-    }))
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name')
+      
+      if (error) {
+        console.error('Erro ao carregar categorias:', error)
+        return []
+      }
+      
+      return (data || []).map(item => ({
+        ...item,
+        limit: item.limit_amount || 0
+      }))
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error)
+      return []
+    }
   },
 
   async create(category: Omit<Category, 'id' | 'created_at' | 'updated_at'>): Promise<Category> {
@@ -239,17 +185,26 @@ export const categoryService = {
 // Funções para metas
 export const goalService = {
   async getAll(): Promise<Goal[]> {
-    const { data, error } = await supabase
-      .from('goals')
-      .select('*')
-      .order('deadline')
-    
-    if (error) throw error
-    return (data || []).map(item => ({
-      ...item,
-      targetAmount: item.target_amount,
-      currentAmount: item.current_amount
-    }))
+    try {
+      const { data, error } = await supabase
+        .from('goals')
+        .select('*')
+        .order('deadline')
+      
+      if (error) {
+        console.error('Erro ao carregar metas:', error)
+        return []
+      }
+      
+      return (data || []).map(item => ({
+        ...item,
+        targetAmount: item.target_amount,
+        currentAmount: item.current_amount
+      }))
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error)
+      return []
+    }
   },
 
   async create(goal: Omit<Goal, 'id' | 'created_at' | 'updated_at'>): Promise<Goal> {
